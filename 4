@@ -1,0 +1,209 @@
+/* ===========================
+   COMMENT FORM
+=========================== */
+
+const commentForm = e.target.closest(".comment-form");
+
+if (commentForm) {
+
+    e.preventDefault();
+
+    const postId = commentForm.dataset.postId;
+
+    const formData = new FormData(commentForm);
+
+    fetch(`/post/${postId}/comment/`, {
+
+        method: "POST",
+
+        body: formData,
+
+        headers: {
+
+            "X-Requested-With": "XMLHttpRequest"
+
+        }
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        if (data.success) {
+
+            const wrapper = commentForm.parentElement;
+
+            wrapper.insertAdjacentHTML(
+
+                "beforebegin",
+
+                `
+                <div class="comment-container"
+                     id="comment-item-${data.comment_id}">
+
+                    <div class="comment-bubble">
+
+                        <span class="comment-user">
+                            ${data.username}
+                        </span>
+
+                        <span class="comment-text-content">
+                            ${data.comment_text}
+                        </span>
+
+                        <br>
+
+                        <button
+                            class="reply-btn"
+                            data-comment-id="${data.comment_id}"
+                            type="button">
+
+                            Reply
+
+                        </button>
+
+                    </div>
+
+                    <button
+                        class="delete-comment-btn"
+                        data-comment-id="${data.comment_id}"
+                        data-post-id="${postId}"
+                        type="button">
+
+                        ×
+
+                    </button>
+
+                </div>
+
+                <div
+                    class="reply-list"
+                    id="reply-list-${data.comment_id}">
+                </div>
+
+                <form
+                    class="reply-form"
+                    data-parent="${data.comment_id}"
+                    data-post-id="${postId}"
+                    style="display:none;">
+
+                    <input
+                        type="hidden"
+                        name="parent"
+                        value="${data.comment_id}">
+
+                    <input
+                        type="text"
+                        name="text"
+                        class="comment-input-field"
+                        placeholder="Write a reply...">
+
+                    <button
+                        class="btn-primary"
+                        type="submit">
+
+                        Reply
+
+                    </button>
+
+                </form>
+                `
+
+            );
+
+            commentForm.reset();
+
+            document.getElementById(
+
+                `comments-count-${postId}`
+
+            ).innerHTML =
+
+            `${data.total_comments} Comments`;
+
+        }
+
+    });
+
+    return;
+
+}
+
+
+/* ===========================
+   REPLY FORM
+=========================== */
+
+const replyForm = e.target.closest(".reply-form");
+
+if (replyForm) {
+
+    e.preventDefault();
+
+    const postId = replyForm.dataset.postId;
+
+    const parentId = replyForm.dataset.parent;
+
+    const formData = new FormData(replyForm);
+
+    fetch(`/post/${postId}/comment/`, {
+
+        method: "POST",
+
+        body: formData,
+
+        headers: {
+
+            "X-Requested-With": "XMLHttpRequest"
+
+        }
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        if (data.success) {
+
+            const replyList = document.getElementById(
+
+                `reply-list-${parentId}`
+
+            );
+
+            replyList.insertAdjacentHTML(
+
+                "beforeend",
+
+                `
+                <div class="reply-box"
+                     id="comment-item-${data.comment_id}">
+
+                    <strong>
+
+                        ${data.username}
+
+                    </strong>
+
+                    <br>
+
+                    ${data.comment_text}
+
+                </div>
+                `
+
+            );
+
+            replyForm.reset();
+
+            replyForm.style.display = "none";
+
+        }
+
+    });
+
+    return;
+
+}
