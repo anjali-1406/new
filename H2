@@ -1,0 +1,152 @@
+            <div class="metrics-row">
+
+                <span id="likes-count-{{ post.id }}">
+
+                    👍 {{ post.likes.count }} Likes
+
+                </span>
+
+                <span
+                    id="comments-count-{{ post.id }}"
+                    class="comment-toggle-btn"
+                    data-post-id="{{ post.id }}">
+
+                    {{ post.comments.count }} Comments
+
+                </span>
+
+            </div>
+
+            <hr>
+
+            <div class="action-bar">
+
+                <button
+                    type="button"
+                    class="action-btn like-btn"
+                    data-post-id="{{ post.id }}"
+                    style="color:{% if request.user in post.likes.all %}#1877f2{% else %}#65676b{% endif %};">
+
+                    👍
+
+                    <span class="like-text">
+
+                        {% if request.user in post.likes.all %}
+
+                            Liked
+
+                        {% else %}
+
+                            Like
+
+                        {% endif %}
+
+                    </span>
+
+                </button>
+
+                <button
+                    type="button"
+                    class="action-btn comment-toggle-btn"
+                    data-post-id="{{ post.id }}">
+
+                    💬 Comment
+
+                </button>
+
+                {% if request.user == post.author %}
+
+                <button
+                    type="button"
+                    class="action-btn delete-post-btn"
+                    data-post-id="{{ post.id }}">
+
+                    🗑 Delete
+
+                </button>
+
+                {% endif %}
+
+            </div>
+
+            <!-- Facebook Comment Popup -->
+
+            <div
+                id="comment-box-{{ post.id }}"
+                class="comment-popup">
+
+                <div class="popup-content">
+
+                    <div class="popup-header">
+
+                        <h3>
+
+                            Comments
+
+                        </h3>
+
+                        <button
+                            type="button"
+                            class="close-comment-popup"
+                            data-post-id="{{ post.id }}">
+
+                            ×
+
+                        </button>
+
+                    </div>
+
+                    <div class="popup-comments">
+
+                        {% for comment in post.comments.all %}
+
+                            {% if not comment.parent %}
+
+                                {% include "comments/reply.html" with comment=comment post=post %}
+
+                            {% endif %}
+
+                        {% empty %}
+
+                            <p class="no-comments">
+
+                                No comments yet.
+
+                            </p>
+
+                        {% endfor %}
+
+                    </div>
+
+                    <div class="popup-footer">
+
+                        <form
+                            class="comment-form"
+                            action="{% url 'posts:add_comment' post.id %}"
+                            data-post-id="{{ post.id }}">
+
+                            {% csrf_token %}
+
+                            <input
+                                id="comment-input-{{ post.id }}"
+                                type="text"
+                                name="text"
+                                class="comment-input-field"
+                                placeholder="Write a comment..."
+                                required>
+
+                            <button
+                                type="submit"
+                                class="btn-primary">
+
+                                Send
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
