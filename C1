@@ -1,0 +1,48 @@
+/* ==========================================================
+   FACEBOOK STYLE HOME.CSS
+   PART 1
+   Body + Feed + Navbar + Create Post
+========================================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:#f0f2f5;
+    font-family:Arial,Helvetica,sans-serif;
+    color:#050505;
+}
+
+/* ================= Layout ================= */
+
+.feed-container{
+    width:100%;
+    max-width:650px;
+    margin:20px auto;
+    padding:0 10px;
+}
+
+/* ================= Feed Card ================= */
+
+.feed-card{
+    background:#fff;
+    border-radius:10px;
+    box-shadow:0 1px 2px rgba(0,0,0,.15);
+    margin-bottom:20px;
+    overflow:hidden;
+}
+
+/* ================= Navigation ================= */
+
+.nav-box{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:15px
