@@ -1,0 +1,38 @@
+        </div>
+
+        {% empty %}
+
+        <div class="feed-card">
+
+            <p
+                style="
+                text-align:center;
+                color:#65676b;
+                padding:30px;">
+
+                No posts yet.
+
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </main>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+
+const csrftoken =
+"{{ csrf_token }}";
+
+</script>
+
+<script src="{% static 'js/home.js' %}"></script>
+
+{% endblock %}
