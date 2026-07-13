@@ -1,0 +1,71 @@
+<div class="comment-container" id="comment-item-{{ comment.id }}">
+
+    <div class="comment-bubble">
+
+        <span class="comment-user">
+            {{ comment.author.username }}
+        </span>
+
+        <span class="comment-text-content">
+            {{ comment.text }}
+        </span>
+
+        <div class="comment-actions">
+
+            <button
+                class="reply-btn"
+                data-comment-id="{{ comment.id }}">
+                Reply
+            </button>
+
+            {% if comment.author == request.user or comment.post.author == request.user %}
+            <button
+                class="delete-comment-btn"
+                data-comment-id="{{ comment.id }}"
+                data-post-id="{{ comment.post.id }}">
+                Delete
+            </button>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <form
+        class="reply-form"
+        data-parent="{{ comment.id }}"
+        data-post-id="{{ comment.post.id }}"
+        style="display:none;">
+
+        {% csrf_token %}
+
+        <input
+            type="hidden"
+            name="parent"
+            value="{{ comment.id }}">
+
+        <input
+            type="text"
+            name="text"
+            class="comment-input-field"
+            placeholder="Write a reply">
+
+        <button class="btn-primary">
+            Reply
+        </button>
+
+    </form>
+
+    {% if comment.replies.all %}
+    <div class="reply-list">
+
+        {% for comment in comment.replies.all %}
+
+            {% include "posts/comment_tree.html" %}
+
+        {% endfor %}
+
+    </div>
+    {% endif %}
+
+</div>
