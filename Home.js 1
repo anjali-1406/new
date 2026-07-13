@@ -1,0 +1,191 @@
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* ===========================
+       IMAGE PREVIEW
+    =========================== */
+
+    const imageInput = document.getElementById("image-input");
+
+    if (imageInput) {
+
+        imageInput.addEventListener("change", function () {
+
+            const previewBox = document.getElementById("image-preview-box");
+
+            const previewImage = document.getElementById("image-preview");
+
+            if (this.files.length > 0) {
+
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+
+                    previewImage.src = e.target.result;
+
+                    previewBox.style.display = "block";
+
+                };
+
+                reader.readAsDataURL(this.files[0]);
+
+            }
+
+        });
+
+    }
+
+
+    /* ===========================
+       CSRF TOKEN
+    =========================== */
+
+    const csrfToken = document.querySelector(
+        "[name=csrfmiddlewaretoken]"
+    ).value;
+
+
+    /* ===========================
+       CLICK EVENTS
+    =========================== */
+
+    document.addEventListener("click", function (e) {
+
+        /* ===========================
+           FOLLOW
+        =========================== */
+
+        const followBtn = e.target.closest(".follow-btn");
+
+        if (followBtn) {
+
+            const username = followBtn.dataset.username;
+
+            fetch(`/follows/toggle/${username}/`, {
+
+                method: "POST",
+
+                headers: {
+
+                    "X-CSRFToken": csrfToken,
+
+                    "X-Requested-With": "XMLHttpRequest"
+
+                }
+
+            })
+
+            .then(res => res.json())
+
+            .then(data => {
+
+                if (!data.success) return;
+
+                document.querySelectorAll(
+                    `.follow-btn[data-username="${username}"]`
+                )
+
+                .forEach(btn => {
+
+                    if (data.is_following) {
+
+                        btn.innerHTML = "Following";
+
+                        btn.classList.add("following");
+
+                    }
+
+                    else {
+
+                        btn.innerHTML = "Follow";
+
+                        btn.classList.remove("following");
+
+                    }
+
+                });
+
+            });
+
+            return;
+
+        }
+
+
+        /* ===========================
+           COMMENT POPUP OPEN
+        =========================== */
+
+        const commentBtn = e.target.closest(".comment-toggle-btn");
+
+        if (commentBtn) {
+
+            const postId = commentBtn.dataset.postId;
+
+            const popup = document.getElementById(
+                `comment-box-${postId}`
+            );
+
+            if (popup) {
+
+                popup.classList.add("show-popup");
+
+            }
+
+            return;
+
+        }
+
+
+        /* ===========================
+           COMMENT POPUP CLOSE
+        =========================== */
+
+        const closeBtn = e.target.closest(".close-comment-popup");
+
+        if (closeBtn) {
+
+            closeBtn.closest(".comment-popup")
+                .classList.remove("show-popup");
+
+            return;
+
+        }
+
+
+        /* ===========================
+           REPLY BUTTON
+        =========================== */
+
+        const replyBtn = e.target.closest(".reply-btn");
+
+        if (replyBtn) {
+
+            const commentId = replyBtn.dataset.commentId;
+
+            const form = document.querySelector(
+
+                `.reply-form[data-parent="${commentId}"]`
+
+            );
+
+            if (form) {
+
+                form.style.display =
+
+                    form.style.display === "flex"
+
+                    ? "none"
+
+                    : "flex";
+
+                form.querySelector(
+
+                    "input[name=text]"
+
+                ).focus();
+
+            }
+
+            return;
+
+        }
