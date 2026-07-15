@@ -1,0 +1,227 @@
+import os
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+
+from .models import Post
+from .forms import PostForm
+from apps.comments.models import Comment
+from apps.notifications.models import Notification
+
+
+class HomeFeedView(LoginRequiredMixin, View):
+
+    template_name = "posts/home.html"
+
+    def get_queryset(self):
+
+        return (
+            Post.objects.all()
+            .select_related("author")
+            .prefetch_related(
+                "likes",
+                "comments__author"
+            )
+            .order_by("-created_at")
+        )
+
+    def get(self, request, *args, **kwargs):
+
+        form = PostForm()
+
+        posts = self.get_queryset()
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "posts": posts,
+                "form": form,
+            }
+        )
+
+    def post(self, request, *args, **kwargs):
+
+        form = PostForm(
+            request.POST,
+            request.FILES
+        )
+
+        if form.is_valid():
+
+            post = form.save(commit=False)
+
+            post.author = request.user
+
+            post.save()
+
+            return redirect("posts:home_feed")
+
+        posts = self.get_queryset()
+
+        return render(
+
+            request,
+
+            self.template_name,
+
+            {
+
+                "posts": posts,
+
+                "form": form,
+
+                "form_errors": form.errors,
+
+            }
+
+        )
+
+
+@method_decorator(require_POST, name="dispatch")
+class ToggleLikeView(LoginRequiredMixin, View):
+
+    def post(self, request, post_id, *args, **kwargs):
+
+        post = get_object_or_404(
+            Post,
+            id=post_id
+        )
+
+        if post.likes.filter(
+            id=request.user.id
+        ).exists():
+
+            post.likes.remove(request.user)
+
+            liked = False
+
+        else:
+
+            post.likes.add(request.user)
+
+            liked = True
+
+            if request.user != post.author:
+
+                Notification.objects.create(
+
+                    sender=request.user,
+
+                    receiver=post.author,
+
+                    notification_type=Notification.LIKE,
+
+                    post_id=post.id
+
+                )
+
+        return JsonResponse({
+
+            "liked": liked,
+
+            "likes_count": post.likes.count()
+
+        })
+
+
+class AddCommentView(LoginRequiredMixin, View):
+
+    def post(self, request, post_id, *args, **kwargs):
+
+        post = get_object_or_404(
+
+            Post,
+
+            id=post_id
+
+        )
+
+        text = request.POST.get("text")
+
+        parent_id = request.POST.get("parent")
+
+        parent = None
+
+        if parent_id:
+
+            parent = get_object_or_404(
+
+                Comment,
+
+                id=parent_id
+
+            )
+
+        comment = Comment.objects.create(
+
+            post=post,
+
+            author=request.user,
+
+            text=text,
+
+            parent=parent
+
+        )
+
+        if parent:
+
+            if request.user != parent.author:
+
+                Notification.objects.create(
+
+                    sender=request.user,
+
+                    receiver=parent.author,
+
+                    notification_type=Notification.REPLY,
+
+                    post_id=post.id
+
+                )
+
+        else:
+
+            if request.user != post.author:
+
+                Notification.objects.create(
+
+                    sender=request.user,
+
+                    receiver=post.author,
+
+                    notification_type=Notification.COMMENT,
+
+                    post_id=post.id
+
+                )
+
+        return JsonResponse({
+
+            "success": True,
+
+            "comment_id": comment.id,
+
+            "username": comment.author.username,
+
+            "text": comment.text,
+
+            "post_id": post.id,
+
+            "parent_id": parent.id if parent else None,
+
+            "total_comments": post.comments.count(),
+
+        })
+
+    def get(self, request, *args, **kwargs):
+
+        return JsonResponse({
+
+            "success": False
+
+        })
