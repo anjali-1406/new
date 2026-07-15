@@ -1,0 +1,60 @@
+@method_decorator(require_POST, name="dispatch")
+class DeleteCommentView(LoginRequiredMixin, View):
+
+    def post(self, request, comment_id, *args, **kwargs):
+
+        comment = get_object_or_404(
+
+            Comment,
+
+            id=comment_id
+
+        )
+
+        if (
+
+            comment.author == request.user
+
+            or
+
+            comment.post.author == request.user
+
+        ):
+
+            post = comment.post
+
+            comment.delete()
+
+            return JsonResponse({
+
+                "success": True,
+
+                "total_comments": post.comments.count()
+
+            })
+
+        return JsonResponse(
+
+            {
+
+                "success": False,
+
+                "error": "Unauthorized"
+
+            },
+
+            status=403
+
+        )
+
+
+@method_decorator(require_POST, name="dispatch")
+class DeletePostView(LoginRequiredMixin, View):
+
+    def post(self, request, post_id, *args, **kwargs):
+
+        post = get_object_or_404(
+
+            Post,
+
+            id=
