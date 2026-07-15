@@ -1,0 +1,110 @@
+from django.utils import timezone
+from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import (
+    ListView,
+    CreateView,
+    DetailView,
+    DeleteView,
+)
+
+from .models import Story, StoryView
+
+
+class StoryListView(LoginRequiredMixin, ListView):
+
+    model = Story
+
+    template_name = "stories/story_list.html"
+
+    context_object_name = "stories"
+
+    def get_queryset(self):
+
+        return Story.objects.filter(
+
+            expires_at__gt=timezone.now()
+
+        ).select_related(
+
+            "author"
+
+        ).order_by(
+
+            "-created_at"
+
+        )
+
+
+class StoryCreateView(LoginRequiredMixin, CreateView):
+
+    model = Story
+
+    fields = [
+
+        "image",
+
+        "caption",
+
+    ]
+
+    template_name = "stories/story_create.html"
+
+    success_url = reverse_lazy("posts:home_feed")
+
+    def form_valid(self, form):
+
+        form.instance.author = self.request.user
+
+        return super().form_valid(form)
+
+
+class StoryDetailView(LoginRequiredMixin, DetailView):
+
+    model = Story
+
+    template_name = "stories/story_detail.html"
+
+    context_object_name = "story"
+
+    def get_object(self):
+
+        story = get_object_or_404(
+
+            Story,
+
+            pk=self.kwargs["pk"],
+
+            expires_at__gt=timezone.now()
+
+        )
+
+        StoryView.objects.get_or_create(
+
+            story=story,
+
+            viewer=self.request.user
+
+        )
+
+        return story
+
+
+class StoryDeleteView(LoginRequiredMixin, DeleteView):
+
+    model = Story
+
+    success_url = reverse_lazy(
+
+        "posts:home_feed"
+
+    )
+
+    def get_queryset(self):
+
+        return Story.objects.filter(
+
+            author=self.request.user
+
+        )
