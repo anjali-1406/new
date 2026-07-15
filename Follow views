@@ -1,0 +1,103 @@
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views import View
+
+from .models import Follow
+from apps.notifications.models import Notification
+
+User = get_user_model()
+
+
+class ToggleFollowView(LoginRequiredMixin, View):
+
+    def post(self, request, username, *args, **kwargs):
+
+        user_to_follow = get_object_or_404(
+
+            User,
+
+            username=username
+
+        )
+
+        if request.user == user_to_follow:
+
+            return JsonResponse(
+
+                {
+
+                    "success": False,
+
+                    "message": "You cannot follow yourself."
+
+                },
+
+                status=400
+
+            )
+
+        follow = Follow.objects.filter(
+
+            follower=request.user,
+
+            following=user_to_follow
+
+        )
+
+        if follow.exists():
+
+            follow.delete()
+
+            is_following = False
+
+        else:
+
+            Follow.objects.create(
+
+                follower=request.user,
+
+                following=user_to_follow
+
+            )
+
+            is_following = True
+
+            Notification.objects.create(
+
+                sender=request.user,
+
+                receiver=user_to_follow,
+
+                notification_type=Notification.FOLLOW
+
+            )
+
+        followers_count = Follow.objects.filter(
+
+            following=user_to_follow
+
+        ).count()
+
+        following_count = Follow.objects.filter(
+
+            follower=user_to_follow
+
+        ).count()
+
+        return JsonResponse(
+
+            {
+
+                "success": True,
+
+                "is_following": is_following,
+
+                "followers_count": followers_count,
+
+                "following_count": following_count,
+
+            }
+
+        )
