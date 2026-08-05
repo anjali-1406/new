@@ -1,0 +1,102 @@
+# =====================================
+# SEARCH, FILTER, ORDERING & PAGINATION
+# =====================================
+
+from django.utils import timezone
+from datetime import timedelta
+
+
+@pytest.mark.django_db
+def test_search_posts(auth_client, user):
+
+    Post.objects.create(
+        author=user,
+        content="Python Django",
+    )
+
+    Post.objects.create(
+        author=user,
+        content="Java Spring Boot",
+    )
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.get(
+        url,
+        {
+            "search": "Python",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+    assert response.data["results"][0]["content"] == "Python Django"
+
+
+@pytest.mark.django_db
+def test_filter_by_author(auth_client, user):
+
+    Post.objects.create(
+        author=user,
+        content="Author Post",
+    )
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.get(
+        url,
+        {
+            "author": user.id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+
+@pytest.mark.django_db
+def test_order_posts(auth_client, user):
+
+    old_post = Post.objects.create(
+        author=user,
+        content="Old Post",
+    )
+
+    new_post = Post.objects.create(
+        author=user,
+        content="New Post",
+    )
+
+    old_post.created_at = timezone.now() - timedelta(days=2)
+    old_post.save(update_fields=["created_at"])
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.get(
+        url,
+        {
+            "ordering": "created_at",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.data["results"][0]["content"] == "Old Post"
+
+
+@pytest.mark.django_db
+def test_post_pagination(auth_client, user):
+
+    for i in range(15):
+
+        Post.objects.create(
+            author=user,
+            content=f"Post {i}",
+        )
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["count"] == 15
+    assert len(response.data["results"]) == 10
