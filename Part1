@@ -1,0 +1,127 @@
+import pytest
+
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.posts.models import Post
+
+User = get_user_model()
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def user():
+
+    return User.objects.create_user(
+        username="anjali",
+        email="anjali@gmail.com",
+        password="Test@1234",
+    )
+
+
+@pytest.fixture
+def auth_client(api_client, user):
+
+    refresh = RefreshToken.for_user(user)
+
+    api_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}"
+    )
+
+    return api_client
+
+
+# =====================================
+# CREATE POST TEST CASES
+# =====================================
+
+@pytest.mark.django_db
+def test_create_post_success(auth_client):
+
+    url = reverse("posts_api:post-list")
+
+    data = {
+        "content": "My First Post"
+    }
+
+    response = auth_client.post(url, data)
+
+    assert response.status_code == 201
+    assert Post.objects.count() == 1
+    assert response.data["content"] == "My First Post"
+
+
+@pytest.mark.django_db
+def test_create_post_without_authentication(api_client):
+
+    url = reverse("posts_api:post-list")
+
+    data = {
+        "content": "My First Post"
+    }
+
+    response = api_client.post(url, data)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_create_empty_post(auth_client):
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.post(url, {})
+
+    assert response.status_code == 400
+    assert "detail" in response.data
+
+
+# =====================================
+# GET POSTS TEST CASES
+# =====================================
+
+@pytest.mark.django_db
+def test_get_all_posts(auth_client, user):
+
+    Post.objects.create(
+        author=user,
+        content="Post 1",
+    )
+
+    Post.objects.create(
+        author=user,
+        content="Post 2",
+    )
+
+    url = reverse("posts_api:post-list")
+
+    response = auth_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["count"] == 2
+
+
+@pytest.mark.django_db
+def test_get_single_post(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Single Post",
+    )
+
+    url = reverse(
+        "posts_api:post-detail",
+        args=[post.id],
+    )
+
+    response = auth_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["content"] == "Single Post"
