@@ -1,0 +1,126 @@
+# =====================================
+# UPDATE & DELETE POST TEST CASES
+# =====================================
+
+@pytest.fixture
+def another_user():
+
+    return User.objects.create_user(
+        username="rahul",
+        email="rahul@gmail.com",
+        password="Test@1234",
+    )
+
+
+@pytest.mark.django_db
+def test_update_own_post(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Old Content",
+    )
+
+    url = reverse(
+        "posts_api:post-detail",
+        args=[post.id],
+    )
+
+    response = auth_client.patch(
+        url,
+        {
+            "content": "Updated Content",
+        },
+    )
+
+    assert response.status_code == 200
+
+    post.refresh_from_db()
+
+    assert post.content == "Updated Content"
+
+
+@pytest.mark.django_db
+def test_update_other_user_post(api_client, another_user):
+
+    refresh = RefreshToken.for_user(another_user)
+
+    api_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}"
+    )
+
+    owner = User.objects.create_user(
+        username="owner",
+        email="owner@gmail.com",
+        password="Owner@123",
+    )
+
+    post = Post.objects.create(
+        author=owner,
+        content="Owner Post",
+    )
+
+    url = reverse(
+        "posts_api:post-detail",
+        args=[post.id],
+    )
+
+    response = api_client.patch(
+        url,
+        {
+            "content": "Hack",
+        },
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_delete_own_post(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Delete Me",
+    )
+
+    url = reverse(
+        "posts_api:post-detail",
+        args=[post.id],
+    )
+
+    response = auth_client.delete(url)
+
+    assert response.status_code == 204
+
+    assert Post.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_delete_other_user_post(api_client, another_user):
+
+    refresh = RefreshToken.for_user(another_user)
+
+    api_client.credentials(
+        HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}"
+    )
+
+    owner = User.objects.create_user(
+        username="owner2",
+        email="owner2@gmail.com",
+        password="Owner@123",
+    )
+
+    post = Post.objects.create(
+        author=owner,
+        content="Owner Post",
+    )
+
+    url = reverse(
+        "posts_api:post-detail",
+        args=[post.id],
+    )
+
+    response = api_client.delete(url)
+
+    assert response.status_code == 403
+
+    assert Post.objects.count() == 1
