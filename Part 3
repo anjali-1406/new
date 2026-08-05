@@ -1,0 +1,109 @@
+# =====================================
+# LIKE, UNLIKE & CUSTOM ACTIONS
+# =====================================
+
+@pytest.mark.django_db
+def test_like_post(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Like Test",
+    )
+
+    url = reverse(
+        "posts_api:post-like",
+        args=[post.id],
+    )
+
+    response = auth_client.post(url)
+
+    assert response.status_code == 200
+    assert response.data["liked"] is True
+    assert response.data["total_likes"] == 1
+
+    post.refresh_from_db()
+
+    assert post.likes.count() == 1
+
+
+@pytest.mark.django_db
+def test_unlike_post(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Unlike Test",
+    )
+
+    post.likes.add(user)
+
+    url = reverse(
+        "posts_api:post-like",
+        args=[post.id],
+    )
+
+    response = auth_client.post(url)
+
+    assert response.status_code == 200
+    assert response.data["liked"] is False
+    assert response.data["total_likes"] == 0
+
+    post.refresh_from_db()
+
+    assert post.likes.count() == 0
+
+
+@pytest.mark.django_db
+def test_my_posts(auth_client, user):
+
+    Post.objects.create(
+        author=user,
+        content="Post 1",
+    )
+
+    Post.objects.create(
+        author=user,
+        content="Post 2",
+    )
+
+    url = reverse("posts_api:post-my-posts")
+
+    response = auth_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["count"] == 2
+
+
+@pytest.mark.django_db
+def test_liked_posts(auth_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Liked Post",
+    )
+
+    post.likes.add(user)
+
+    url = reverse("posts_api:post-liked-posts")
+
+    response = auth_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+
+@pytest.mark.django_db
+def test_like_post_requires_authentication(api_client, user):
+
+    post = Post.objects.create(
+        author=user,
+        content="Protected Like",
+    )
+
+    url = reverse(
+        "posts_api:post-like",
+        args=[post.id],
+    )
+
+    response = api_client.post(url)
+
+    assert response.status_code == 401
