@@ -1,0 +1,130 @@
+# =========================================================
+# STRIPE WEBHOOK
+# =========================================================
+
+@csrf_exempt
+def stripe_webhook(request):
+
+    if request.method != "POST":
+        return HttpResponse(
+            "Webhook endpoint",
+            status=200
+        )
+
+    payload = request.body
+
+    signature = request.META.get(
+        "HTTP_STRIPE_SIGNATURE"
+    )
+
+    webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    # -----------------------------------------------------
+    # CHECK SIGNATURE
+    # -----------------------------------------------------
+
+    if not signature:
+        return HttpResponse(
+            "Missing Stripe signature",
+            status=400
+        )
+
+    # -----------------------------------------------------
+    # VERIFY STRIPE WEBHOOK
+    # -----------------------------------------------------
+
+    try:
+
+        event = stripe.Webhook.construct_event(
+            payload,
+            signature,
+            webhook_secret
+        )
+
+    except ValueError:
+
+        return HttpResponse(
+            "Invalid payload",
+            status=400
+        )
+
+    except stripe.error.SignatureVerificationError:
+
+        return HttpResponse(
+            "Invalid signature",
+            status=400
+        )
+
+    # -----------------------------------------------------
+    # IDEMPOTENCY
+    # -----------------------------------------------------
+
+    event_id = event["id"]
+
+    cache_key = f"stripe_event_{event_id}"
+
+    if cache.get(cache_key):
+
+        return HttpResponse(
+            "Event already processed",
+            status=200
+        )
+
+    # -----------------------------------------------------
+    # CHECKOUT SESSION COMPLETED
+    # -----------------------------------------------------
+
+    if event["type"] == "checkout.session.completed":
+
+        session = event["data"]["object"]
+
+        # StripeObject attribute access
+        payment_status = session.payment_status
+
+        if payment_status == "paid":
+
+            # Stripe metadata is a StripeObject
+            metadata = session.metadata
+
+            # DO NOT use metadata.get()
+            if "user_id" in metadata:
+
+                user_id = metadata["user_id"]
+
+                try:
+
+                    profile = Profile.objects.get(
+                        user_id=user_id
+                    )
+
+                    if not profile.is_verified:
+
+                        profile.is_verified = True
+
+                        profile.save(
+                            update_fields=[
+                                "is_verified"
+                            ]
+                        )
+
+                except Profile.DoesNotExist:
+
+                    return HttpResponse(
+                        "Profile not found",
+                        status=404
+                    )
+
+    # -----------------------------------------------------
+    # MARK EVENT AS PROCESSED
+    # -----------------------------------------------------
+
+    cache.set(
+        cache_key,
+        True,
+        timeout=60 * 60 * 24
+    )
+
+    return HttpResponse(
+        "Webhook received",
+        status=200
+    )
