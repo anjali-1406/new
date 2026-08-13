@@ -1,0 +1,57 @@
+from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
+
+from apps.profiles.models import Profile
+
+
+User = get_user_model()
+
+
+class Command(BaseCommand):
+
+    help = "Display the current project status"
+
+    def handle(self, *args, **options):
+
+        total_users = User.objects.count()
+        total_profiles = Profile.objects.count()
+
+        verified_profiles = Profile.objects.filter(
+            is_verified=True
+        ).count()
+
+        unverified_profiles = Profile.objects.filter(
+            is_verified=False
+        ).count()
+
+        self.stdout.write("")
+        self.stdout.write("=" * 50)
+        self.stdout.write("          SOCIAL MEDIA PROJECT STATUS")
+        self.stdout.write("=" * 50)
+
+        self.stdout.write(
+            f"Total Users       : {total_users}"
+        )
+
+        self.stdout.write(
+            f"Total Profiles    : {total_profiles}"
+        )
+
+        self.stdout.write(
+            f"Verified Profiles : {verified_profiles}"
+        )
+
+        self.stdout.write(
+            f"Unverified        : {unverified_profiles}"
+        )
+
+        self.stdout.write("-" * 50)
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Project is running successfully."
+            )
+        )
+
+        self.stdout.write("=" * 50)
+        self.stdout.write("")
